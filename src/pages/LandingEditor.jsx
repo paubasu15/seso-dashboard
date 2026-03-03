@@ -61,6 +61,7 @@ export default function LandingEditor() {
   // Listen for PREVIEW_READY from iframe
   useEffect(() => {
     const handleMessage = (event) => {
+      if (event.origin !== LANDING_URL) return
       if (event.data?.type === 'PREVIEW_READY') {
         previewReadyRef.current = true
         sendFullConfig(localConfig)

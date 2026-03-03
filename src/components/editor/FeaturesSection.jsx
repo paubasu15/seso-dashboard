@@ -7,15 +7,6 @@ const ICON_OPTIONS = [
   { value: 'heart', label: '❤️ Heart' },
 ]
 
-const ICON_EMOJI = {
-  rocket: '🚀',
-  shield: '🛡️',
-  chart: '📊',
-  star: '⭐',
-  zap: '⚡',
-  heart: '❤️',
-}
-
 export default function FeaturesSection({ data, onChange }) {
   const items = data.items || []
   const sectionTitle = data.title || ''

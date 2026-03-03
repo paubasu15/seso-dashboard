@@ -54,23 +54,25 @@ El editor (`/app/editor`) funciona con un sistema de **iframe + postMessage** pa
 React envía mensajes al iframe cuando el usuario edita:
 
 ```javascript
+const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:4321'
+
 // Cambio de colores
 iframeRef.current.contentWindow.postMessage({
   type: 'UPDATE_COLORS',
   payload: { primaryColor: '#10B981', secondaryColor: '#059669' }
-}, '*')
+}, LANDING_URL)
 
 // Cambio de datos de un componente
 iframeRef.current.contentWindow.postMessage({
   type: 'UPDATE_COMPONENT',
   payload: { componentType: 'hero', data: { title: 'Nuevo título' } }
-}, '*')
+}, LANDING_URL)
 
 // Mostrar/ocultar componente
 iframeRef.current.contentWindow.postMessage({
   type: 'TOGGLE_COMPONENT',
   payload: { componentType: 'testimonials', visible: false }
-}, '*')
+}, LANDING_URL)
 ```
 
 El iframe envía `{ type: 'PREVIEW_READY' }` cuando está listo para recibir mensajes.
