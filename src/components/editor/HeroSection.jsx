@@ -1,48 +1,48 @@
 export default function HeroSection({ data, onChange }) {
   const update = (field, value) => {
-    onChange({ hero: { ...data.hero, [field]: value } })
+    onChange({ [field]: value })
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Título principal</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Título principal</label>
         <input
           type="text"
-          value={data.hero?.title || ''}
+          value={data.title || ''}
           onChange={(e) => update('title', e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           placeholder="Bienvenido a nuestra plataforma"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Subtítulo</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Subtítulo</label>
         <textarea
-          value={data.hero?.subtitle || ''}
+          value={data.subtitle || ''}
           onChange={(e) => update('subtitle', e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           rows={3}
           placeholder="La mejor solución para tu negocio"
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Texto del botón CTA</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Texto del CTA</label>
           <input
             type="text"
-            value={data.hero?.ctaText || ''}
+            value={data.ctaText || ''}
             onChange={(e) => update('ctaText', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Comenzar ahora"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Link del CTA</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Link del CTA</label>
           <input
             type="text"
-            value={data.hero?.ctaLink || ''}
+            value={data.ctaLink || ''}
             onChange={(e) => update('ctaLink', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="#"
           />
         </div>
