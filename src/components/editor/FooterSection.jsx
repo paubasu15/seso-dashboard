@@ -14,7 +14,7 @@ export default function FooterSection({ data, onChange }) {
   }
 
   const addLink = () => {
-    const newLink = { id: Date.now(), label: 'Nuevo enlace', url: '#' }
+    const newLink = { id: crypto.randomUUID(), label: 'Nuevo enlace', url: '#' }
     onChange({ footer: { ...footer, links: [...links, newLink] } })
   }
 

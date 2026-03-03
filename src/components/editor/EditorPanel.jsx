@@ -11,7 +11,7 @@ const SECTIONS = [
   { id: 'footer', label: '📄 Footer', component: FooterSection },
 ]
 
-export default function EditorPanel({ data, onChange, onSave, saving, saved }) {
+export default function EditorPanel({ data, onChange, onSave, saving, saved, saveError }) {
   const [activeSection, setActiveSection] = useState('general')
 
   const ActiveComponent = SECTIONS.find((s) => s.id === activeSection)?.component
@@ -44,6 +44,9 @@ export default function EditorPanel({ data, onChange, onSave, saving, saved }) {
 
       {/* Save button */}
       <div className="p-4 border-t border-gray-200 bg-white">
+        {saveError && (
+          <p className="text-xs text-red-500 mb-2">⚠️ {saveError}</p>
+        )}
         <button
           onClick={onSave}
           disabled={saving}

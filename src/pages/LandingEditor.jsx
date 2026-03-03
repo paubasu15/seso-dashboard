@@ -16,6 +16,7 @@ export default function LandingEditor() {
   const [viewport, setViewport] = useState('desktop')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   // Sync when context config changes
   useEffect(() => {
@@ -24,19 +25,21 @@ export default function LandingEditor() {
 
   const handleChange = (updates) => {
     setSaved(false)
+    setSaveError(null)
     setLocalConfig((prev) => ({ ...prev, ...updates }))
   }
 
   const handleSave = async () => {
     setSaving(true)
     setSaved(false)
+    setSaveError(null)
     try {
       await updateTenantConfig(tenant, localConfig)
       setConfig(localConfig)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch {
-      // Handle error silently
+    } catch (err) {
+      setSaveError(err.message || 'Error al guardar los cambios')
     } finally {
       setSaving(false)
     }
@@ -76,6 +79,7 @@ export default function LandingEditor() {
             onSave={handleSave}
             saving={saving}
             saved={saved}
+            saveError={saveError}
           />
         </div>
 

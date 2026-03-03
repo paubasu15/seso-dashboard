@@ -10,7 +10,7 @@ export default function FeaturesSection({ data, onChange }) {
 
   const addFeature = () => {
     const newFeature = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       icon: '✨',
       title: 'Nueva feature',
       description: 'Descripción de la feature',
