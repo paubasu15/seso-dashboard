@@ -1,49 +1,39 @@
-export default function FooterSection({ data, onChange }) {
-  const links = data.links || []
+export default function HeaderSection({ data, onChange }) {
+  const navLinks = data.navLinks || []
 
   const updateLink = (id, field, value) => {
-    const updated = links.map((l) => (l.id === id ? { ...l, [field]: value } : l))
-    onChange({ links: updated })
+    const updated = navLinks.map((l) => (l.id === id ? { ...l, [field]: value } : l))
+    onChange({ navLinks: updated })
   }
 
   const addLink = () => {
-    const newLink = { id: crypto.randomUUID(), label: 'Nuevo enlace', url: '#' }
-    onChange({ links: [...links, newLink] })
+    const newLink = { id: crypto.randomUUID(), label: 'Enlace', url: '#' }
+    onChange({ navLinks: [...navLinks, newLink] })
   }
 
   const removeLink = (id) => {
-    onChange({ links: links.filter((l) => l.id !== id) })
+    onChange({ navLinks: navLinks.filter((l) => l.id !== id) })
   }
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Texto del footer</label>
-        <input
-          type="text"
-          value={data.text || ''}
-          onChange={(e) => onChange({ text: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="© 2025 Mi Empresa"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-2">Links del footer</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Links de navegación</label>
         <div className="space-y-2">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <div key={link.id} className="flex gap-1.5 items-center">
               <input
                 type="text"
                 value={link.label || ''}
                 onChange={(e) => updateLink(link.id, 'label', e.target.value)}
-                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Etiqueta"
               />
               <input
                 type="text"
                 value={link.url || ''}
                 onChange={(e) => updateLink(link.id, 'url', e.target.value)}
-                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="URL"
               />
               <button

@@ -21,3 +21,9 @@ export async function getTenantModules(tenant) {
   if (!res.ok) throw new Error(`Failed to fetch tenant modules: HTTP ${res.status}`)
   return res.json()
 }
+
+export async function getTemplates() {
+  const res = await fetch(`${API_URL}/api/templates`)
+  if (!res.ok) throw new Error(`Failed to fetch templates: HTTP ${res.status}`)
+  return res.json()
+}

@@ -1,79 +1,101 @@
-export default function FeaturesSection({ data, onChange }) {
-  const features = data.features || []
+const ICON_OPTIONS = [
+  { value: 'rocket', label: '🚀 Rocket' },
+  { value: 'shield', label: '🛡️ Shield' },
+  { value: 'chart', label: '📊 Chart' },
+  { value: 'star', label: '⭐ Star' },
+  { value: 'zap', label: '⚡ Zap' },
+  { value: 'heart', label: '❤️ Heart' },
+]
 
-  const updateFeature = (id, field, value) => {
-    const updated = features.map((f) =>
-      f.id === id ? { ...f, [field]: value } : f
-    )
-    onChange({ features: updated })
+export default function FeaturesSection({ data, onChange }) {
+  const items = data.items || []
+  const sectionTitle = data.title || ''
+
+  const updateItem = (id, field, value) => {
+    const updated = items.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+    onChange({ items: updated })
   }
 
-  const addFeature = () => {
-    const newFeature = {
+  const addItem = () => {
+    const newItem = {
       id: crypto.randomUUID(),
-      icon: '✨',
+      icon: 'rocket',
       title: 'Nueva feature',
       description: 'Descripción de la feature',
     }
-    onChange({ features: [...features, newFeature] })
+    onChange({ items: [...items, newItem] })
   }
 
-  const removeFeature = (id) => {
-    onChange({ features: features.filter((f) => f.id !== id) })
+  const removeItem = (id) => {
+    onChange({ items: items.filter((f) => f.id !== id) })
   }
 
   return (
-    <div className="space-y-4">
-      {features.map((feature, index) => (
-        <div key={feature.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Título de la sección</label>
+        <input
+          type="text"
+          value={sectionTitle}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Nuestras características"
+        />
+      </div>
+      {items.map((item, index) => (
+        <div key={item.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-500">Feature {index + 1}</span>
+            <span className="text-xs font-medium text-gray-500">Feature {index + 1}</span>
             <button
-              onClick={() => removeFeature(feature.id)}
-              className="text-red-400 hover:text-red-600 text-sm transition-colors"
+              onClick={() => removeItem(item.id)}
+              className="text-red-400 hover:text-red-600 text-xs transition-colors"
             >
-              Eliminar
+              ❌
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ícono</label>
-              <input
-                type="text"
-                value={feature.icon || ''}
-                onChange={(e) => updateFeature(feature.id, 'icon', e.target.value)}
-                className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="⚡"
-              />
+              <select
+                value={item.icon || 'rocket'}
+                onChange={(e) => updateItem(item.id, 'icon', e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {ICON_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <label className="block text-xs text-gray-500 mb-1">Título</label>
               <input
                 type="text"
-                value={feature.title || ''}
-                onChange={(e) => updateFeature(feature.id, 'title', e.target.value)}
-                className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={item.title || ''}
+                onChange={(e) => updateItem(item.id, 'title', e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Título"
               />
             </div>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Descripción</label>
-            <input
-              type="text"
-              value={feature.description || ''}
-              onChange={(e) => updateFeature(feature.id, 'description', e.target.value)}
-              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <textarea
+              value={item.description || ''}
+              onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              rows={2}
               placeholder="Descripción de la feature"
             />
           </div>
         </div>
       ))}
       <button
-        onClick={addFeature}
+        onClick={addItem}
         className="w-full py-2 border-2 border-dashed border-indigo-300 rounded-lg text-indigo-500 hover:border-indigo-500 hover:bg-indigo-50 transition-colors text-sm font-medium"
       >
-        + Agregar feature
+        ➕ Agregar feature
       </button>
     </div>
   )
