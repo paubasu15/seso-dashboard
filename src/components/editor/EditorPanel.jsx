@@ -1,26 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import GeneralSection from './GeneralSection.jsx'
-import HeaderSection from './HeaderSection.jsx'
-import HeroSection from './HeroSection.jsx'
-import FeaturesSection from './FeaturesSection.jsx'
-import TestimonialsSection from './TestimonialsSection.jsx'
-import PricingSection from './PricingSection.jsx'
-import FooterSection from './FooterSection.jsx'
+import DynamicComponentEditor from './DynamicComponentEditor.jsx'
+import TemplateSelector from './TemplateSelector.jsx'
+import { getTemplates } from '../../api/tenantApi.js'
 
-const SECTION_MAP = {
-  header: { label: '🧭 Header', Component: HeaderSection },
-  hero: { label: '🦸 Hero', Component: HeroSection },
-  features: { label: '✨ Features', Component: FeaturesSection },
-  testimonials: { label: '💬 Testimonios', Component: TestimonialsSection },
-  pricing: { label: '💰 Precios', Component: PricingSection },
-  footer: { label: '📄 Footer', Component: FooterSection },
+const COMPONENT_EMOJI = {
+  header: '🧭',
+  hero: '🦸',
+  features: '✨',
+  testimonials: '💬',
+  pricing: '💰',
+  footer: '📄',
+  'cta-banner': '📢',
+  gallery: '🖼️',
+  skills: '🎯',
+  'contact-form': '📬',
+  'hero-slider': '🎠',
+  'product-grid': '🛍️',
+  'trust-badges': '✅',
 }
-
-const DEFAULT_COMPONENTS = [
-  { type: 'hero', visible: true, data: {} },
-  { type: 'features', visible: true, data: { title: 'Features', items: [] } },
-  { type: 'footer', visible: true, data: { text: '', links: [] } },
-]
 
 function getComponents(data) {
   if (data.components && Array.isArray(data.components) && data.components.length > 0) {
@@ -59,9 +57,10 @@ function ToggleSwitch({ checked, onChange }) {
   )
 }
 
-function SectionAccordion({ sectionDef, comp, onToggleVisible, onDataChange }) {
+function SectionAccordion({ comp, schema, onToggleVisible, onDataChange }) {
   const [open, setOpen] = useState(false)
-  const { label, Component } = sectionDef
+  const emoji = COMPONENT_EMOJI[comp.type] || '📦'
+  const label = schema?.label || comp.type
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -71,7 +70,9 @@ function SectionAccordion({ sectionDef, comp, onToggleVisible, onDataChange }) {
         onClick={() => setOpen((prev) => !prev)}
       >
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-700">{label}</span>
+          <span className="text-xs font-medium text-gray-700">
+            {emoji} {label}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <ToggleSwitch
@@ -91,7 +92,11 @@ function SectionAccordion({ sectionDef, comp, onToggleVisible, onDataChange }) {
       {/* Accordion body */}
       {open && (
         <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-          <Component data={comp.data || {}} onChange={onDataChange} />
+          <DynamicComponentEditor
+            schema={schema?.fields || []}
+            data={comp.data || {}}
+            onChange={onDataChange}
+          />
         </div>
       )}
     </div>
@@ -100,6 +105,39 @@ function SectionAccordion({ sectionDef, comp, onToggleVisible, onDataChange }) {
 
 export default function EditorPanel({ data, onChange, onSave, onPublish, onDiscard, saving, publishing, discarding, hasChanges, saveError, publishError }) {
   const [generalOpen, setGeneralOpen] = useState(true)
+  const [templates, setTemplates] = useState([])
+  const [activeTemplate, setActiveTemplate] = useState(null)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [templateLoadError, setTemplateLoadError] = useState(null)
+
+  useEffect(() => {
+    getTemplates()
+      .then(setTemplates)
+      .catch((err) => setTemplateLoadError(err.message || 'Error al cargar plantillas'))
+  }, [])
+
+  useEffect(() => {
+    if (templates.length > 0 && data?.template) {
+      const tpl = templates.find((t) => t.id === data.template)
+      setActiveTemplate(tpl || null)
+    }
+  }, [templates, data?.template])
+
+  const handleTemplateChange = (newTemplateId) => {
+    const newTpl = templates.find((t) => t.id === newTemplateId)
+    if (!newTpl) return
+    const newComponents = newTpl.components.map((comp) => ({
+      type: comp.type,
+      order: comp.order,
+      visible: comp.visible,
+      data: { ...comp.defaultData },
+    }))
+    onChange({
+      ...data,
+      template: newTemplateId,
+      components: newComponents,
+    })
+  }
 
   const components = getComponents(data)
 
@@ -110,17 +148,44 @@ export default function EditorPanel({ data, onChange, onSave, onPublish, onDisca
     onChange({ components: newComponents })
   }
 
-  const handleDataChange = (type, updates) => {
+  const handleDataChange = (type, newData) => {
     const newComponents = components.map((c) =>
-      c.type === type ? { ...c, data: { ...c.data, ...updates } } : c
+      c.type === type ? { ...c, data: newData } : c
     )
     onChange({ components: newComponents })
+  }
+
+  // Build a map from component type → schema info (label + fields)
+  const schemaMap = {}
+  if (activeTemplate) {
+    activeTemplate.components.forEach((tplComp) => {
+      schemaMap[tplComp.type] = {
+        label: tplComp.label || tplComp.type,
+        fields: tplComp.schema || [],
+      }
+    })
   }
 
   return (
     <div className="flex flex-col h-full">
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* Template selector button */}
+        {templateLoadError ? (
+          <p className="text-xs text-red-500">⚠️ {templateLoadError}</p>
+        ) : (
+        <button
+          type="button"
+          onClick={() => setShowTemplateSelector(true)}
+          className="w-full py-2 px-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors flex items-center justify-between"
+        >
+          <span>📐 Cambiar plantilla</span>
+          {activeTemplate && (
+            <span className="text-gray-500">{activeTemplate.name}</span>
+          )}
+        </button>
+        )}
+
         {/* General section - always visible */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <div
@@ -145,19 +210,15 @@ export default function EditorPanel({ data, onChange, onSave, onPublish, onDisca
         </div>
 
         {/* Dynamic component sections */}
-        {components.map((comp) => {
-          const sectionDef = SECTION_MAP[comp.type]
-          if (!sectionDef) return null
-          return (
-            <SectionAccordion
-              key={comp.type}
-              sectionDef={sectionDef}
-              comp={comp}
-              onToggleVisible={handleToggleVisible}
-              onDataChange={(updates) => handleDataChange(comp.type, updates)}
-            />
-          )
-        })}
+        {components.map((comp) => (
+          <SectionAccordion
+            key={comp.type}
+            comp={comp}
+            schema={schemaMap[comp.type]}
+            onToggleVisible={handleToggleVisible}
+            onDataChange={(newData) => handleDataChange(comp.type, newData)}
+          />
+        ))}
       </div>
 
       {/* Action buttons */}
@@ -209,6 +270,15 @@ export default function EditorPanel({ data, onChange, onSave, onPublish, onDisca
           </button>
         )}
       </div>
+
+      {/* Template selector modal */}
+      {showTemplateSelector && (
+        <TemplateSelector
+          currentTemplate={data?.template}
+          onChangeTemplate={handleTemplateChange}
+          onClose={() => setShowTemplateSelector(false)}
+        />
+      )}
     </div>
   )
 }
