@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTenant } from '../hooks/useTenant.js'
-import { updateTenantConfig } from '../api/tenantApi.js'
+import {
+  getTenantConfigDraft,
+  saveTenantConfigDraft,
+  publishTenantConfig,
+  discardTenantDraft,
+} from '../api/tenantApi.js'
 import EditorPanel from '../components/editor/EditorPanel.jsx'
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:4321'
+const DEBOUNCE_DELAY_MS = 500
 
 const VIEWPORTS = [
   { id: 'desktop', label: '🖥️ Desktop', width: '100%' },
@@ -16,127 +22,126 @@ export default function LandingEditor() {
   const [localConfig, setLocalConfig] = useState(config)
   const [viewport, setViewport] = useState('desktop')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState(null)
+  const [discarding, setDiscarding] = useState(false)
   const iframeRef = useRef(null)
-  const previewReadyRef = useRef(false)
+  const debounceRef = useRef(null)
+  const pendingConfigRef = useRef(null)
 
-  // Sync when context config changes
+  // Load draft config on mount; config from context is the fallback
   useEffect(() => {
-    setLocalConfig(config)
-  }, [config])
-
-  const sendMessage = useCallback((message) => {
-    if (previewReadyRef.current && iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(message, LANDING_URL)
-    }
-  }, [])
-
-  const sendFullConfig = useCallback((cfg) => {
-    sendMessage({
-      type: 'UPDATE_COLORS',
-      payload: {
-        primaryColor: cfg.primaryColor,
-        secondaryColor: cfg.secondaryColor,
-        backgroundColor: cfg.backgroundColor,
-        textColor: cfg.textColor,
-      },
-    })
-    if (cfg.components && Array.isArray(cfg.components)) {
-      cfg.components.forEach((comp) => {
-        sendMessage({
-          type: 'UPDATE_COMPONENT',
-          payload: { componentType: comp.type, data: comp.data },
-        })
-        if (comp.visible === false) {
-          sendMessage({
-            type: 'TOGGLE_COMPONENT',
-            payload: { componentType: comp.type, visible: false },
-          })
-        }
+    if (!tenant) return
+    getTenantConfigDraft(tenant)
+      .then((draft) => {
+        setLocalConfig(draft)
       })
-    }
-  }, [sendMessage])
+      .catch(() => {
+        setLocalConfig(config)
+      })
+  }, [tenant]) // intentionally run only on mount / tenant change
 
-  // Listen for PREVIEW_READY from iframe
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.origin !== LANDING_URL) return
-      if (event.data?.type === 'PREVIEW_READY') {
-        previewReadyRef.current = true
-        sendFullConfig(localConfig)
+  const reloadIframe = useCallback(() => {
+    if (iframeRef.current) {
+      iframeRef.current.src = `${LANDING_URL}/preview?tenant=${tenant}&draft=true&t=${Date.now()}`
+    }
+  }, [tenant])
+
+  const saveDraft = useCallback(
+    async (cfg) => {
+      setSaving(true)
+      setSaveError(null)
+      try {
+        await saveTenantConfigDraft(tenant, cfg)
+        reloadIframe()
+      } catch (err) {
+        setSaveError(err.message || 'Error al guardar el borrador')
+      } finally {
+        setSaving(false)
       }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [localConfig, sendFullConfig])
+    },
+    [tenant, reloadIframe]
+  )
 
-  const handleChange = (updates) => {
-    setSaved(false)
-    setSaveError(null)
-    const newConfig = { ...localConfig, ...updates }
-    setLocalConfig(newConfig)
+  const handleChange = useCallback(
+    (updates) => {
+      setHasChanges(true)
+      setSaveError(null)
+      setPublishError(null)
+      const newConfig = { ...localConfig, ...updates }
+      setLocalConfig(newConfig)
+      pendingConfigRef.current = newConfig
 
-    // Send color updates
-    const colorKeys = ['primaryColor', 'secondaryColor', 'backgroundColor', 'textColor']
-    const hasColorUpdate = colorKeys.some((k) => k in updates)
-    if (hasColorUpdate) {
-      sendMessage({
-        type: 'UPDATE_COLORS',
-        payload: {
-          primaryColor: newConfig.primaryColor,
-          secondaryColor: newConfig.secondaryColor,
-          backgroundColor: newConfig.backgroundColor,
-          textColor: newConfig.textColor,
-        },
-      })
-    }
-
-    // Send component updates
-    if (updates.components && Array.isArray(updates.components)) {
-      const prevComponents = localConfig.components || []
-      updates.components.forEach((comp) => {
-        const prev = prevComponents.find((p) => p.type === comp.type)
-        if (prev?.visible !== comp.visible) {
-          sendMessage({
-            type: 'TOGGLE_COMPONENT',
-            payload: { componentType: comp.type, visible: comp.visible !== false },
-          })
+      // Debounce: save draft after 500ms without changes
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        if (pendingConfigRef.current) {
+          saveDraft(pendingConfigRef.current)
+          pendingConfigRef.current = null
         }
-        if (JSON.stringify(prev?.data) !== JSON.stringify(comp.data)) {
-          sendMessage({
-            type: 'UPDATE_COMPONENT',
-            payload: { componentType: comp.type, data: comp.data },
-          })
-        }
-      })
+      }, DEBOUNCE_DELAY_MS)
+    },
+    [localConfig, saveDraft]
+  )
+
+  const handleManualSave = async () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    pendingConfigRef.current = null
+    await saveDraft(localConfig)
+  }
+
+  const handlePublish = async () => {
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      await publishTenantConfig(tenant)
+      setConfig(localConfig)
+      setHasChanges(false)
+      reloadIframe()
+    } catch (err) {
+      setPublishError(err.message || 'Error al publicar')
+    } finally {
+      setPublishing(false)
     }
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    setSaved(false)
+  const handleDiscard = async () => {
+    setDiscarding(true)
     setSaveError(null)
+    setPublishError(null)
     try {
-      await updateTenantConfig(tenant, localConfig)
-      setConfig(localConfig)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      await discardTenantDraft(tenant)
+      setLocalConfig(config)
+      setHasChanges(false)
+      reloadIframe()
     } catch (err) {
-      setSaveError(err.message || 'Error al guardar los cambios')
+      setSaveError(err.message || 'Error al descartar cambios')
     } finally {
-      setSaving(false)
+      setDiscarding(false)
     }
   }
 
   const currentViewport = VIEWPORTS.find((v) => v.id === viewport)
-  const iframeSrc = `${LANDING_URL}/preview?tenant=${tenant}`
+  const iframeSrc = `${LANDING_URL}/preview?tenant=${tenant}&draft=true`
 
   return (
     <div className="-m-6 h-[calc(100vh-3.5rem)] flex flex-col">
       {/* Editor header */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <h2 className="font-semibold text-gray-800">Editor de Landing Page</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-semibold text-gray-800">Editor de Landing Page</h2>
+          {saving && (
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              Guardando...
+            </span>
+          )}
+          {hasChanges && !saving && (
+            <span className="text-xs text-amber-600 font-medium">⚠️ Cambios sin publicar</span>
+          )}
+        </div>
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           {VIEWPORTS.map((v) => (
             <button
@@ -161,10 +166,15 @@ export default function LandingEditor() {
           <EditorPanel
             data={localConfig}
             onChange={handleChange}
-            onSave={handleSave}
+            onSave={handleManualSave}
+            onPublish={handlePublish}
+            onDiscard={handleDiscard}
             saving={saving}
-            saved={saved}
+            publishing={publishing}
+            discarding={discarding}
+            hasChanges={hasChanges}
             saveError={saveError}
+            publishError={publishError}
           />
         </div>
 

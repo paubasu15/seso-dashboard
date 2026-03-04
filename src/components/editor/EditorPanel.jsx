@@ -98,7 +98,7 @@ function SectionAccordion({ sectionDef, comp, onToggleVisible, onDataChange }) {
   )
 }
 
-export default function EditorPanel({ data, onChange, onSave, saving, saved, saveError }) {
+export default function EditorPanel({ data, onChange, onSave, onPublish, onDiscard, saving, publishing, discarding, hasChanges, saveError, publishError }) {
   const [generalOpen, setGeneralOpen] = useState(true)
 
   const components = getComponents(data)
@@ -160,25 +160,54 @@ export default function EditorPanel({ data, onChange, onSave, saving, saved, sav
         })}
       </div>
 
-      {/* Save button */}
-      <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-        {saveError && <p className="text-xs text-red-500 mb-2">⚠️ {saveError}</p>}
+      {/* Action buttons */}
+      <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0 space-y-2">
+        {saveError && <p className="text-xs text-red-500">⚠️ {saveError}</p>}
+        {publishError && <p className="text-xs text-red-500">⚠️ {publishError}</p>}
         <button
           onClick={onSave}
           disabled={saving}
-          className="w-full py-2.5 px-4 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-2 px-4 bg-gray-700 text-white rounded-lg font-medium text-sm hover:bg-gray-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
         >
           {saving ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Guardando...
             </>
-          ) : saved ? (
-            <>✅ ¡Guardado!</>
           ) : (
-            '💾 Guardar cambios'
+            '💾 Guardar borrador'
           )}
         </button>
+        <button
+          onClick={onPublish}
+          disabled={publishing || saving}
+          className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+        >
+          {publishing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Publicando...
+            </>
+          ) : (
+            '🚀 Publicar'
+          )}
+        </button>
+        {hasChanges && (
+          <button
+            onClick={onDiscard}
+            disabled={discarding}
+            className="w-full py-2 px-4 bg-white text-red-600 border border-red-300 rounded-lg font-medium text-sm hover:bg-red-50 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+          >
+            {discarding ? (
+              <>
+                <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                Descartando...
+              </>
+            ) : (
+              '🗑️ Descartar cambios'
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
